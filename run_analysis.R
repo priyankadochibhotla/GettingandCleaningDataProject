@@ -1,0 +1,66 @@
+# run_analysis.R
+
+# Step 0: Load packages
+install.packages("reshape2")
+library("reshape2")
+
+
+# Step 1: Merges the training and the test sets to create one data set.
+
+# load training data
+subject_train <- read.table("./Desktop/UCI HAR Dataset/train/subject_train.txt")
+X_train <- read.table("./Desktop/UCI HAR Dataset/train/X_train.txt")
+y_train <- read.table("./Desktop/UCI HAR Dataset/train/y_train.txt")
+
+# load test data
+subject_test <- read.table("./Desktop/UCI HAR Dataset/test/subject_test.txt")
+X_test <- read.table("./Desktop/UCI HAR Dataset/test/X_test.txt")
+y_test <- read.table("./Desktop/UCI HAR Dataset/test/y_test.txt")
+
+# get activity labels
+activity_labels <- read.table("./Desktop/UCI HAR Dataset/activity_labels.txt")[,2]
+
+# get data column names
+features <- read.table("./Desktop/UCI HAR Dataset/features.txt")[,2]
+
+# add column name for subject files
+names(subject_train) <- "subjectID"
+names(subject_test) <- "subjectID"
+
+# add column names for measurement files
+names(X_train) <- features
+names(X_test) <- features
+  
+# add column name for label files
+names(y_train) <- "activity"
+names(y_test) <- "activity"
+  
+# create one dataset
+train <- cbind(subject_train, y_train, X_train)
+test <- cbind(subject_test, y_test, X_test)
+datatable <- rbind(train, test)
+
+
+# Step 2: Extracts only the measurements on the mean and standard deviation for each measurement. 
+# find which columns contain mean() or std()
+mean_sd <- grepl("mean\\(\\)|std\\(\\)", names(datatable))
+
+# keep subjectID and activity columns
+mean_sd[1:2] <- TRUE
+
+# remove "FALSE" (not mean or std) columns
+datatable <- datatable[, mean_sd]
+
+
+# Step 3: Uses descriptive activity names to name the activities in the data set
+# Step 4: Appropriately labels the data set with descriptive variable names. 
+datatable$activity <- factor(datatable$activity, labels = activity_labels)
+
+
+# Step 5: From the data set in step 4, creates a second, independent tidy data set with the
+# average of each variable for each activity and each subject.
+meltdata <- melt(datatable, id = c("subjectID", "activity"))
+tidydata <- dcast(meltdata, subjectID+activity ~ variable, mean)
+
+# write tidy dataset to a text file
+write.table(tidydata, file = "./Desktop/tidydata.txt", row.name = FALSE)
